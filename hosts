@@ -1,0 +1,31 @@
+127.0.0.1  localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1       localhost localhost.localdomain localhost6 localhost6.localdomain6
+192.168.8.2     AMS_HRAD_SERVER_M5
+192.168.8.8     PYDIO
+192.168.8.12    PEACHTREE_CO_OWNED
+192.168.8.13    PEACHTREE_UGMI
+192.168.8.14    PEACHTREE3391
+192.168.8.15    PEACHTREE_UHPC
+192.168.8.16    PEACHTREE_NEW
+192.168.10.2    FACE_BIO
+192.168.10.8    CCTV_SERVER1
+192.168.10.9    CCTV_SERVER2
+192.168.10.10   HR_CCTV_PC
+192.168.11.254  annex.fotonphils.net
+
+
+192.168.8.51    DIVINE_GUECO_DESKTOP_LAN
+192.168.8.52    DIVINE_GUECO_ANDROID_WIFI
+192.168.8.101   ca_icatar_wifi
+192.168.8.54    joe_samsung_galaxy_s21_ultra
+192.168.8.55    BEVERLY_MANUEL_LAPTOP_WIFI
+192.168.8.56    adsad
+192.168.8.57    ALVIN_LU_IPAD
+192.168.8.58    a1a2a3a4a5a6
+#192.168.8.59    #OPEN
+#192.168.8.60    #OPEN
+#192.168.8.100   #OPEN
+
+#192.168.8.61    #OPEN
+#192.168.8.62    #OPEN
+#192.168.8.63    #OPEN
