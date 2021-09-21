@@ -51,17 +51,50 @@ else
         echo "-----------------------------------------------------------------"
         echo "| MAC already registered.                                       |"
         echo "-----------------------------------------------------------------"
-        echo "MAC address already registered on this IP:" $ex_mac_ip
+        echo "MAC address already registered in IP(s) below:"
+        #Loop and get other macs existing if multiple are found 
+        declare -a arr=($multi_mac)
+        for i in "${arr[@]}"
+        do
+                mac_ip=$(sed -n ${i}p ethers | cut -c18- | xargs )
+                echo $mac_ip
+        done    
         echo "Please check ethers and hosts"
         echo "-----------------------------------------------------------------"
-        bash $0
+
 fi
 }
 
-#Clear IP Function
-clear_dhcp () {
+#Search_by_name function
+search_host (){
         echo "--------------------------------------------------" 
-        echo "|Clear IP                                        |"
+        echo "|Search Host                                     |"
+        echo "--------------------------------------------------"
+        echo "Search Host Name:"
+        read searchhost
+        search=$(grep -n -s -i ${searchhost} hosts |  gawk '{print $1}' FS=":")
+        search_check=$(grep -n -s -i ${searchhost} hosts |  gawk '{print $1}' FS=":" | head -1)
+        echo "--------------------------------------------------"
+        echo "|Search Result:                                  |"
+        echo "--------------------------------------------------"
+        if [[ $search_check -gt 1 ]]
+        then
+                declare -a arr=($search)
+                for i in "${arr[@]}"
+                do
+                        search_res=$(sed -n ${i}p hosts |  xargs )
+                        echo $search_res
+                done
+        else
+                echo "No results."
+        fi
+
+}
+
+#Delete host Function
+delete_dhcp () {
+        echo "--------------------------------------------------" 
+        echo "|Delete Host                                     |"
         echo "--------------------------------------------------"
         echo "Search IP:"
         read clearip
@@ -98,69 +131,28 @@ clear_dhcp () {
                 fi
 	        ;;
                 N)
-                exit
+                        exit
                 ;;
                 esac
 }
 
-#Catch input
-date
-now=$(date)
-echo "                           [DHCP Registration Script]                                       "
-echo "[- If using different criteria for available IPs, please replace #OPEN in the source code  ]"
-echo "[- Please make sure that criterias for open IPs are matched to avoid errors during operation ]"
-echo "                              [- Choose operation: ]"
-echo  "                              1. Register device"
-echo  "                              2. Check available IP"
-echo  "                              3. Delete Host/IP"
-echo  "                              4. View Logs"
-echo  "                              5. Clear Logs"
-echo  "                              6. Clear dnsmasq.leases"
-echo  "                              7. Restart dnsmasq"
-echo  "                              0. Exit"
-echo "Select:"
-read option
-case $option in 
-
+#Logs option
+logs_dhcp () {
+echo "------------------------------------------------"
+echo "|Logs Menu:                                    |"
+echo "------------------------------------------------"
+echo "1. View Logs"
+echo "2. Clear Logs"
+read logs
+case $logs in      
    1)
-    echo "Enter host name ( no spaces ):" 
-    read dhcpname
-    echo "Enter mac address: ( correct format no spaces ):"
-    read macaddress
-    #validate Mac address format
-    format1=$(echo $macaddress | sed "/^\([0-9Aa-Zz][0-9Aa-Zz]:\)\{5\}[0-9Aa-Zz][0-9A-Za-z]$/p" )
-    format2=$(echo $format1 | rev | cut -c18- | rev | xargs)
-    check_mac=$(grep -n -s ${macaddress} ethers |  gawk '{print $1}' FS=":" | head -1)
-    ex_mac_ip=$(sed -n ${check_mac}p ethers | cut -c18- | xargs )
-    if [[ $macaddress == $format2 ]]
-    then
-        reg_dhcp  
-    else
-        echo "-----------------------------------------------------------------"
-        echo "| Invalid MAC address format                                    |"
-        echo "-----------------------------------------------------------------"
-    fi
+        echo "------------------------------------------------"
+        echo "|Logs:                                         |"
+        echo "------------------------------------------------"
+        cat dhcp_logs
    ;;
-    
+
    2)
-        echo "------------------------------------------------"
-        echo "|Available IPs:                                |"
-        echo "------------------------------------------------"
-	grep -n '#OPEN' hosts | gawk '{print $1}' FS="  " 
-   ;;
-
-  3)
-        clear_dhcp
-  ;;
-
-  4)
-       echo "------------------------------------------------"
-       echo "|Logs:                                         |"
-       echo "------------------------------------------------"
-       cat dhcp_logs
- ;;
-
- 5)
        echo "------------------------------------------------"
        echo "|Clear Logs:                                   |"
        echo "------------------------------------------------"
@@ -175,23 +167,92 @@ case $option in
                 exit
         ;;
         esac
- ;;
+   ;;
+esac
+}
 
- 6)     
+#Interface menu
+date
+now=$(date)
+echo "                           [DHCP Registration Script]                                       "
+echo "[- If using different criteria for available IPs, please replace #OPEN in the source code  ]"
+echo "[- Please make sure that criterias for open IPs are matched to avoid errors during operation ]"
+echo "                              [- Choose operation: ]"
+echo  "                              1. Register device"
+echo  "                              2. Search Hosts"
+echo  "                              3. Check Available IP"
+echo  "                              4. Delete IP/Host"
+echo  "                              5. Logs"
+echo  "                                                       "
+echo  "                              6. Clear dnsmasq.leases"
+echo  "                              7. Restart dnsmasq"
+echo  "                              0. Exit"
+echo "Select:"
+read option
+case $option in 
+
+   #Registration   
+   1)
+    echo "Enter host name ( no spaces ):" 
+    read dhcpname
+    echo "Enter mac address: ( correct format no spaces ):"
+    read macaddress
+    #validate Mac address format
+    format1=$(echo $macaddress | sed "/^\([0-9Aa-Zz][0-9Aa-Zz]:\)\{5\}[0-9Aa-Zz][0-9A-Za-z]$/p" )
+    format2=$(echo $format1 | rev | cut -c18- | rev | xargs)
+    check_mac=$(grep -n -s ${macaddress} ethers |  gawk '{print $1}' FS=":" | head -1)
+    multi_mac=$(grep -n -s ${macaddress} ethers |  gawk '{print $1}' FS=":")
+    ex_mac_ip=$(sed -n ${check_mac}p ethers | cut -c18- | xargs )
+    if [[ $macaddress == $format2 ]]
+    then
+        reg_dhcp  
+    else
+        echo "-----------------------------------------------------------------"
+        echo "| Invalid MAC address format                                    |"
+        echo "-----------------------------------------------------------------"
+    fi
+   ;;
+
+   #Search Host option     
+   2)
+         search_host
+   ;;
+
+   #Available IPs
+   3)
+        echo "------------------------------------------------"
+        echo "|Available IPs:                                |"
+        echo "------------------------------------------------"
+	grep -n '#OPEN' hosts | gawk '{print $1}' FS="  " | cut -c5-
+   ;;
+
+   #Delete DHCP/IP
+   4)
+         clear_dhcp
+   ;;
+
+   #Logs
+   5)
+        logs_dhcp
+   ;;
+   
+
+   6)     
         systemctl stop dnsmasq
         cat /dev/null > var/lib/dnsmasq/dnsmasq.leases
         systemctl start dnsmasq
         
-        echo "Cleared dnsmasq.leases and restarted dnsmasq service"
- ;;
+        echo "Cleared dnsmasq.leases and restarted dnsmasq service |" $now  >>  dhcp_logs
+   ;;
 
 
- 7)     
+   7)     
         systemctl restart dnsmasq
-        echo "Restarted dnsmasq service"
- ;;
+        echo "Restarted dnsmasq service |" $now >> dhcp_logs
+   ;;
 
-  0)
+
+   0)
      exit
   ;;
  
