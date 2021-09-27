@@ -10,7 +10,8 @@ then
                    #checks for available IP and provides line
                    linenum=$(grep -n -s '#OPEN' hosts | gawk '{print $1}' FS=":" | head -1 )  
                    #get ip from that available IP 
-                   getip=$(sed -n ${linenum}p hosts | awk -F '   '  '{print $1}' | cut -c2- | xargs )
+                   getip=$(sed -n ${linenum}p hosts | awk -F '  '  '{print $1}' | cut -c2- | xargs )
+                   
                    #get line from ethers that matches the available IP from hosts 
                    linenumeth=$(grep -n -s ${getip} ethers | gawk '{print $1}' FS=":" | head -1) 
 
@@ -70,9 +71,10 @@ search_host (){
         echo "--------------------------------------------------" 
         echo "|Search Host                                     |"
         echo "--------------------------------------------------"
-        echo "Search Host Name:"
+        echo "Search Host Name or IP:"
         read searchhost
         search=$(grep -n -s -i ${searchhost} hosts |  gawk '{print $1}' FS=":")
+        search_count=$(grep -n -s -i ${searchhost} hosts |  gawk '{print $1}' FS=":" | wc -l)
         search_check=$(grep -n -s -i ${searchhost} hosts |  gawk '{print $1}' FS=":" | head -1)
         echo "--------------------------------------------------"
         echo "|Search Result:                                  |"
@@ -88,7 +90,9 @@ search_host (){
         else
                 echo "No results."
         fi
-
+        echo "--------------------------------------------------"
+        echo "Total result count:" $search_count
+        echo "--------------------------------------------------"
 }
 
 #Delete host Function
@@ -106,13 +110,13 @@ delete_dhcp () {
         	ipline=$(grep -n ${clearip} hosts | gawk '{print $1}' FS=":" | head -1)
    		iplineeth=$(grep -n ${clearip} ethers | gawk '{print $1}' FS=":" | head -1)
                 #get IP from $ipline
-                ipcheck=$(sed -n ${ipline}p hosts | cut -c1-13 | awk '{$1=$1;print}')
+                ipcheck=$(sed -n ${ipline}p hosts | cut -c1-14 | awk '{$1=$1;print}')
 
                 if [[ $clearip == $ipcheck ]]
                 then
                 #get IP from ethers and hosts
           	hostrep=$(sed -n ${ipline}p hosts | cut -c 17-)
-                ethrep=$(sed -n ${iplineeth}p ethers | rev | cut -c14- | rev | xargs )
+                ethrep=$(sed -n ${iplineeth}p ethers | rev | cut -c14- | rev | xargs | gawk '{print $1}' FS=" " )
 
                 #replace MAC and HOST NAME based on ID with #OPEN
         	sed -i "${ipline}s/${hostrep}/#OPEN/" hosts
@@ -128,6 +132,7 @@ delete_dhcp () {
         	 echo "-------------------------------------------------"
                 else    
                      echo "IP not found!"
+                     bash $0
                 fi
 	        ;;
                 N)
@@ -143,6 +148,7 @@ echo "|Logs Menu:                                    |"
 echo "------------------------------------------------"
 echo "1. View Logs"
 echo "2. Clear Logs"
+echo "Select Logs operation:"
 read logs
 case $logs in      
    1)
@@ -165,6 +171,53 @@ case $logs in
 	;;
         N)
                 exit
+                bash $0
+        ;;
+        esac
+   ;;
+esac
+}
+
+#Backup Options
+backup_dhcp () {
+echo "------------------------------------------------"
+echo "|Backup Menu:                                   |"
+echo "------------------------------------------------"
+echo "1. Check backups"
+echo "2. Backup Hosts and Ethers"
+echo "Select backup operation:"
+read backups
+case $backups in      
+   1)
+        echo "------------------------------------------------"
+        echo "|Backups:                                      |"
+        echo "------------------------------------------------"
+        ls backup
+   ;;
+
+   2)
+       echo "------------------------------------------------"
+       echo "|Backup Hosts and Ethers?                      |"
+       echo "------------------------------------------------"
+       echo "Backup host and ethers? (Y/N)"
+       read sel
+	case $sel in 
+        Y)      
+                if [[ -d "backup" ]]
+                then
+                    cp hosts backup/hosts-$datebackup
+                    cp ethers backup/ethers-$datebackup
+                    echo "Backup Success!"
+                else   
+                    mkdir backup
+                    cp hosts backup/hosts-$datebackup
+                    cp ethers backup/ethers-$datebackup
+                    echo "Backup folder created, Backup Success!"
+                fi
+
+	;;
+        N)
+                exit
         ;;
         esac
    ;;
@@ -174,7 +227,9 @@ esac
 #Interface menu
 date
 now=$(date)
-echo "                           [DHCP Registration Script]                                       "
+datebackup=$(date +%m-%d-%y-%T)
+green=`tput setaf 2`
+echo "                            [DHCP Registration Script]                                      "
 echo "[- If using different criteria for available IPs, please replace #OPEN in the source code  ]"
 echo "[- Please make sure that criterias for open IPs are matched to avoid errors during operation ]"
 echo "                              [- Choose operation: ]"
@@ -183,9 +238,10 @@ echo  "                              2. Search Hosts"
 echo  "                              3. Check Available IP"
 echo  "                              4. Delete IP/Host"
 echo  "                              5. Logs"
+echo  "                              6. Backups"
 echo  "                                                       "
-echo  "                              6. Clear dnsmasq.leases"
-echo  "                              7. Restart dnsmasq"
+echo  "                              7. Clear dnsmasq.leases"
+echo  "                              8. Restart dnsmasq"
 echo  "                              0. Exit"
 echo "Select:"
 read option
@@ -193,22 +249,24 @@ case $option in
 
    #Registration   
    1)
-    echo "Enter host name ( no spaces ):" 
+    echo "Enter host name ( no spaces, alphanumeric and _ only ):" 
     read dhcpname
-    echo "Enter mac address: ( correct format no spaces ):"
+    echo "Enter mac address: ( mac address format only ):"
     read macaddress
+    #validate hostname format
+    hostformat=$(echo $dhcpname | sed "s/[^[:alnum:]_]//g")
     #validate Mac address format
     format1=$(echo $macaddress | sed "/^\([0-9Aa-Zz][0-9Aa-Zz]:\)\{5\}[0-9Aa-Zz][0-9A-Za-z]$/p" )
     format2=$(echo $format1 | rev | cut -c18- | rev | xargs)
     check_mac=$(grep -n -s ${macaddress} ethers |  gawk '{print $1}' FS=":" | head -1)
     multi_mac=$(grep -n -s ${macaddress} ethers |  gawk '{print $1}' FS=":")
     ex_mac_ip=$(sed -n ${check_mac}p ethers | cut -c18- | xargs )
-    if [[ $macaddress == $format2 ]]
+    if [[ $macaddress == $format2 && $hostformat == $dhcpname ]]
     then
         reg_dhcp  
     else
         echo "-----------------------------------------------------------------"
-        echo "| Invalid MAC address format                                    |"
+        echo "| Invalid MAC address or hostname format                       |"
         echo "-----------------------------------------------------------------"
     fi
    ;;
@@ -223,12 +281,16 @@ case $option in
         echo "------------------------------------------------"
         echo "|Available IPs:                                |"
         echo "------------------------------------------------"
-	grep -n '#OPEN' hosts | gawk '{print $1}' FS="  " | cut -c5-
+        grep -n '#OPEN' hosts | gawk '{print $1}' FS="  " | cut -c5-
+	totalip=$(grep -n '#OPEN' hosts | gawk '{print $1}' FS="  " | cut -c5- | wc -l)
+        echo "------------------------------------------------"
+        echo "|Total available IPs:" $totalip               "|"
+        echo "------------------------------------------------"
    ;;
 
    #Delete DHCP/IP
    4)
-         clear_dhcp
+         delete_dhcp
    ;;
 
    #Logs
@@ -236,8 +298,12 @@ case $option in
         logs_dhcp
    ;;
    
+   #Backups 
+   6)
+        backup_dhcp
+   ;;
 
-   6)     
+   7)     
         systemctl stop dnsmasq
         cat /dev/null > var/lib/dnsmasq/dnsmasq.leases
         systemctl start dnsmasq
